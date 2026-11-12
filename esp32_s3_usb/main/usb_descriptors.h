@@ -18,6 +18,6 @@ enum {
 
 extern tusb_desc_device_t const desc_device;
 extern uint8_t const desc_configuration[];
-extern char const* string_desc_arr;
+extern char const* string_desc_arr[4];
 
 #endif /* USB_DESCRIPTORS_H_ */
