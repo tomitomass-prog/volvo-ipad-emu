@@ -8,21 +8,19 @@
 static const char *TAG = "IAP_PROTO";
 
 // Bufor przechowujący aktualny tytuł i wykonawcę z Bluetooth (domyślnie 1 utwór w bazie)
-static char current_title = "Volvo BT Audio";
-static char current_artist = "Bluetooth Stream";
+static char current_title[128] = "Volvo BT Audio";
+static char current_artist[128] = "Bluetooth Stream";
 
 void iap_update_track_title(const char *title) {
     if (title && strlen(title) > 0) {
-        strncpy(current_title, title, sizeof(current_title) - 1);
-        current_title[sizeof(current_title) - 1] = '\0';
+        snprintf(current_title, sizeof(current_title), "%s", title);
         ESP_LOGI(TAG, "Zaktualizowano tytul: %s", current_title);
     }
 }
 
 void iap_update_track_artist(const char *artist) {
     if (artist && strlen(artist) > 0) {
-        strncpy(current_artist, artist, sizeof(current_artist) - 1);
-        current_artist[sizeof(current_artist) - 1] = '\0';
+        snprintf(current_artist, sizeof(current_artist), "%s", artist);
         ESP_LOGI(TAG, "Zaktualizowano artyste: %s", current_artist);
     }
 }
@@ -38,11 +36,11 @@ static uint8_t iap_checksum(const uint8_t *data, size_t len) {
 
 // Wysyłanie odpowiedzi iAP po USB HID (dobieramy odpowiedni Report ID do długości ramki)
 static void iap_send_packet(uint8_t lingo, uint16_t cmd, const uint8_t *payload, uint8_t payload_len) {
-    uint8_t packet;
+    uint8_t packet[260] = {0};
     uint8_t report_id = 2; // Domyślnie Report ID 2 (do 63 bajtów)
     uint8_t report_size = 63;
 
-    // Nagłówek iAP: 0x00 (Link Control) + 0x55 (Sync) + Len + Lingo + Cmd (2 bajty dla Lingo 0x04 lub 1 bajt dla 0x00)
+    // Nagłówek iAP: 0x00 (Link Control) + 0x55 (Sync) + Len + Lingo + Cmd
     size_t idx = 0;
     packet[idx++] = 0x00; // HID Link Control Byte
     packet[idx++] = 0x55; // Sync Byte
@@ -66,7 +64,7 @@ static void iap_send_packet(uint8_t lingo, uint16_t cmd, const uint8_t *payload,
     }
 
     // Suma kontrolna liczona od bajtu długości (indeks 2)
-    packet[idx] = iap_checksum(&packet, idx - 2);
+    packet[idx] = iap_checksum(&packet[2], idx - 2);
     idx++;
 
     // Dobór Report ID zależnie od całkowitej długości pakietu
@@ -110,7 +108,7 @@ void iap_process_hid_packet(uint8_t report_id, const uint8_t *buffer, uint16_t b
 
         if (cmd == 0x01 || cmd == 0x0F || cmd == 0x13) {
             // Identify / IdentifyDeviceLingoes -> Odpowiadamy ACK (0x02)
-            uint8_t ack = { 0x00, cmd };
+            uint8_t ack[2] = { 0x00, cmd };
             iap_send_packet(0x00, 0x02, ack, sizeof(ack));
         } else if (cmd == 0x07) {
             // RequestiPodName -> Zwracamy nazwę "Volvo iPod"
@@ -118,7 +116,7 @@ void iap_process_hid_packet(uint8_t report_id, const uint8_t *buffer, uint16_t b
             iap_send_packet(0x00, 0x08, (const uint8_t *)name, strlen(name) + 1);
         } else if (cmd == 0x09) {
             // RequestiPodSoftwareVersion -> Zwracamy wersję 2.0.1
-            uint8_t ver = { 0x02, 0x00, 0x01 };
+            uint8_t ver[3] = { 0x02, 0x00, 0x01 };
             iap_send_packet(0x00, 0x0A, ver, sizeof(ver));
         } else if (cmd == 0x0B) {
             // RequestiPodSerialNum -> Zwracamy numer seryjny
@@ -126,15 +124,15 @@ void iap_process_hid_packet(uint8_t report_id, const uint8_t *buffer, uint16_t b
             iap_send_packet(0x00, 0x0C, (const uint8_t *)serial, strlen(serial) + 1);
         } else if (cmd == 0x0D) {
             // RequestiPodModelNum -> Zwracamy model iPod Touch / Classic
-            uint8_t model = { 0x00, 0x0B, 0x00, 0x00, 'P', 'A', '2', '9', '3', 0x00 };
+            uint8_t model[10] = { 0x00, 0x0B, 0x00, 0x00, 'P', 'A', '2', '9', '3', 0x00 };
             iap_send_packet(0x00, 0x0E, model, sizeof(model));
         } else if (cmd == 0x27) {
             // GetDevAuthenticationInfo -> Odpowiadamy pustym certyfikatem (tryb bez chipa MFi)
-            uint8_t auth = { 0x02, 0x00, 0x00, 0x00 };
+            uint8_t auth[4] = { 0x02, 0x00, 0x00, 0x00 };
             iap_send_packet(0x00, 0x28, auth, sizeof(auth));
         } else if (cmd == 0x29) {
             // RetDevAuthenticationSignature -> Potwierdzamy ACK
-            uint8_t ack = { 0x00, 0x29 };
+            uint8_t ack[2] = { 0x00, 0x29 };
             iap_send_packet(0x00, 0x02, ack, sizeof(ack));
         }
     }
@@ -147,20 +145,20 @@ void iap_process_hid_packet(uint8_t report_id, const uint8_t *buffer, uint16_t b
         // 0x0018: GetNumberCategorizedDBRecords (Volvo pyta, ile jest piosenek w pamięci!)
         if (cmd == 0x0018) {
             // Zawsze zgłaszamy 1 utwór w pamięci (0x00000001), aby odblokować iPoda w Volvo
-            uint8_t count_resp = { 0x00, 0x00, 0x00, 0x01 };
+            uint8_t count_resp[4] = { 0x00, 0x00, 0x00, 0x01 };
             iap_send_packet(0x04, 0x0019, count_resp, sizeof(count_resp));
         }
         // 0x001A: RetrieveCategorizedDatabaseRecords (Volvo pobiera nazwę naszego 1 wirtualnego MP3)
         else if (cmd == 0x001A) {
-            uint8_t resp;
-            resp = 0x00; resp = 0x00; resp = 0x00; resp = 0x00; // Indeks utworu: 0
+            uint8_t resp[140] = {0};
+            resp[0] = 0x00; resp[1] = 0x00; resp[2] = 0x00; resp[3] = 0x00; // Indeks utworu: 0
             size_t tlen = strlen(current_title) + 1;
-            memcpy(&resp, current_title, tlen);
+            memcpy(&resp[4], current_title, tlen);
             iap_send_packet(0x04, 0x001B, resp, 4 + tlen);
         }
         // 0x001C: GetPlayStatus (Stan odtwarzania, długość utworu, aktualna pozycja)
         else if (cmd == 0x001C) {
-            uint8_t status = {
+            uint8_t status[9] = {
                 0x00, 0x03, 0xA9, 0x80, // Długość utworu: 240 000 ms (4 minuty)
                 0x00, 0x00, 0x27, 0x10, // Aktualna pozycja: 10 000 ms
                 0x01                    // Status: 0x01 = Playing
@@ -176,7 +174,7 @@ void iap_process_hid_packet(uint8_t report_id, const uint8_t *buffer, uint16_t b
             iap_send_packet(0x04, 0x0023, (const uint8_t *)current_artist, strlen(current_artist) + 1);
         }
         // 0x0024: GetIndexedPlayingTrackAlbumName (Volvo prosi o nazwę albumu)
-        else if (cmd == 0x0025) {
+        else if (cmd == 0x0024) {
             const char *album = "Bluetooth Audio";
             iap_send_packet(0x04, 0x0025, (const uint8_t *)album, strlen(album) + 1);
         }
@@ -199,12 +197,12 @@ void iap_process_hid_packet(uint8_t report_id, const uint8_t *buffer, uint16_t b
                 uart_write_bytes(uart_num, uart_cmd, strlen(uart_cmd));
             }
             // Potwierdzenie wykonania komendy (ACK 0x0001)
-            uint8_t ack = { 0x00, 0x00, 0x29 };
+            uint8_t ack[3] = { 0x00, 0x00, 0x29 };
             iap_send_packet(0x04, 0x0001, ack, sizeof(ack));
         }
         // Pozostałe komendy z Lingo 0x04 (np. ResetDBSelection, PlayCurrentSelection) -> ACK
         else {
-            uint8_t ack = { 0x00, (cmd >> 8) & 0xFF, cmd & 0xFF };
+            uint8_t ack[3] = { 0x00, (cmd >> 8) & 0xFF, cmd & 0xFF };
             iap_send_packet(0x04, 0x0001, ack, sizeof(ack));
         }
     }
