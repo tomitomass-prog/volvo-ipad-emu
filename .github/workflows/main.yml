@@ -1,0 +1,66 @@
+name: Build Volvo iPod Emulator Firmware (.bin)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-esp32-s3:
+    name: Build ESP32-S3 Zero (USB iPod Emulator)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Source consistency checks
+        run: python3 tests_check.py
+
+      - name: ESP-IDF Build
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.1.2
+          target: esp32s3
+          path: esp32_s3_usb
+          command: idf.py build
+
+      - name: Upload ESP32-S3 Binary Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32-s3-zero-firmware
+          path: |
+            esp32_s3_usb/build/volvo_ipod_s3.bin
+            esp32_s3_usb/build/bootloader/bootloader.bin
+            esp32_s3_usb/build/partition_table/partition-table.bin
+            esp32_s3_usb/build/flasher_args.json
+            esp32_s3_usb/build/flash_args
+
+  build-esp32-classic:
+    name: Build ESP32 Classic (Bluetooth A2DP Bridge)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Build ESP32 Classic Firmware
+        working-directory: esp32_classic_bt
+        run: pio run
+
+      - name: Upload ESP32 Classic Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32-classic-bt-firmware
+          path: |
+            esp32_classic_bt/.pio/build/esp32dev/firmware.bin
+            esp32_classic_bt/.pio/build/esp32dev/bootloader.bin
+            esp32_classic_bt/.pio/build/esp32dev/partitions.bin
