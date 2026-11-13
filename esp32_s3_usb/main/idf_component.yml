@@ -1,3 +1,0 @@
-dependencies:
-  espressif/tinyusb: "^0.15.0"
-  espressif/esp_tinyusb: "^1.4.2"
