@@ -7,7 +7,13 @@ iap = (r/'esp32_s3_usb/main/iap_protocol.c').read_text()
 assert '.bclk =' in s3 and '.bck =' not in s3
 assert '.bclk_inv =' in s3 and '.bck_inv =' not in s3
 assert 'I2SStream i2s;' in bt and 'set_pin_config' not in bt
-assert '_Static_assert(sizeof(desc_configuration) == 132' in d
-assert '0x84, 0x00' in d
+assert '_Static_assert(sizeof(desc_configuration) == 140' in d
+assert '0x8C, 0x00' in d
 assert 'if (!buffer || bufsize < 7)' in iap
 print('Static source checks PASS (not firmware compilation or hardware tests)')
+
+cm=(r/'esp32_s3_usb/main/CMakeLists.txt').read_text()
+for token in ('CFG_TUD_AUDIO_FUNC_1_DESC_LEN=99','CFG_TUD_AUDIO_FUNC_1_N_AS_INT=1','CFG_TUD_AUDIO_FUNC_1_CTRL_BUF_SZ=64','CFG_TUD_AUDIO_ENABLE_EP_IN=1','espressif__tinyusb'):
+    assert token in cm, f'Missing TinyUSB config {token}'
+assert '0x08, 0x0B, ITF_NUM_AUDIO_CONTROL' in d
+print('ESP32-S3 TinyUSB CMake definitions and Audio IAD checks PASS')
