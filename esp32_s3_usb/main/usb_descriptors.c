@@ -52,7 +52,11 @@ uint8_t const * tud_hid_descriptor_report_cb(uint8_t instance) {
 
 uint8_t const desc_configuration[] = {
     // Configuration Descriptor: total length verified by a compile-time assertion.
-    0x09, TUSB_DESC_CONFIGURATION, 0x84, 0x00, ITF_NUM_TOTAL, 0x01, 0x00, 0x80, 250,
+    0x09, TUSB_DESC_CONFIGURATION, 0x8C, 0x00, ITF_NUM_TOTAL, 0x01, 0x00, 0x80, 250,
+
+    // USB Audio function IAD: interfaces 0 and 1 belong to one function.
+    // (8-byte IAD + 91-byte Audio descriptors = 99 bytes)
+    0x08, 0x0B, ITF_NUM_AUDIO_CONTROL, 0x02, 0x01, 0x00, 0x00, 0x00,
 
     // Interface 0: Audio Control
     0x09, TUSB_DESC_INTERFACE, ITF_NUM_AUDIO_CONTROL, 0x00, 0x00, TUSB_CLASS_AUDIO, 0x01, 0x00, 0x00,
@@ -74,7 +78,7 @@ uint8_t const desc_configuration[] = {
     TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_HID, 0, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report), EPNUM_HID_OUT, EPNUM_HID_IN, 64, 1)
 };
 
-_Static_assert(sizeof(desc_configuration) == 132, "USB descriptor length mismatch");
+_Static_assert(sizeof(desc_configuration) == 140, "USB descriptor length mismatch");
 
 uint8_t const * tud_descriptor_configuration_cb(uint8_t index) {
     (void) index;
