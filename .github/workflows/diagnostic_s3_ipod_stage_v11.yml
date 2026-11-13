@@ -1,0 +1,41 @@
+name: ESP32-S3 Zero - UAC1 Stereo + Vendor HID stage v1.1
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - 'esp32_s3_usb_ipod_stage_v11/**'
+      - '.github/workflows/diagnostic_s3_ipod_stage_v11.yml'
+jobs:
+  build-stage11:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build S3 stage v1.1 (ESP-IDF v5.4.2)
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.4.2
+          target: esp32s3
+          path: esp32_s3_usb_ipod_stage_v11
+          command: idf.py build
+      - name: Validate firmware output files
+        shell: bash
+        run: |
+          set -euo pipefail
+          p=esp32_s3_usb_ipod_stage_v11/build
+          test -s "$p/volvo_s3_ipod_stage_v11.bin"
+          test -s "$p/bootloader/bootloader.bin"
+          test -s "$p/partition_table/partition-table.bin"
+          test -s "$p/flasher_args.json"
+      - name: Upload diagnostic binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32-s3-ipod-stage-v11
+          if-no-files-found: error
+          path: |
+            esp32_s3_usb_ipod_stage_v11/build/volvo_s3_ipod_stage_v11.bin
+            esp32_s3_usb_ipod_stage_v11/build/bootloader/bootloader.bin
+            esp32_s3_usb_ipod_stage_v11/build/partition_table/partition-table.bin
+            esp32_s3_usb_ipod_stage_v11/build/flasher_args.json
+            esp32_s3_usb_ipod_stage_v11/build/flash_args
