@@ -7,6 +7,7 @@ idf_component_register(
 # Audio/HID. Audio definitions must match in BOTH translation units:
 # our app and the TinyUSB class driver compiled as a separate component.
 set(VOLVO_AUDIO_CONFIG
+    CFG_TUD_AUDIO=1
     CFG_TUD_AUDIO_FUNC_1_DESC_LEN=99
     CFG_TUD_AUDIO_FUNC_1_N_AS_INT=1
     CFG_TUD_AUDIO_FUNC_1_CTRL_BUF_SZ=64
