@@ -1,0 +1,43 @@
+name: ESP32-S3 Zero - USB Audio + HID diagnostic v0.8
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - 'esp32_s3_usb_audio_hid_diag/**'
+      - '.github/workflows/diagnostic_s3_audio_hid.yml'
+
+jobs:
+  build-s3-audio-hid:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build diagnostic firmware ESP-IDF 5.1.2
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.1.2
+          target: esp32s3
+          path: esp32_s3_usb_audio_hid_diag
+          command: idf.py build
+      - name: Check BIN and flash addresses
+        shell: bash
+        run: |
+          set -euo pipefail
+          p=esp32_s3_usb_audio_hid_diag/build
+          test -s "$p/volvo_s3_audio_hid_diag.bin"
+          test -s "$p/bootloader/bootloader.bin"
+          test -s "$p/partition_table/partition-table.bin"
+          test -s "$p/flasher_args.json"
+      - name: Publish firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32-s3-audio-hid-diagnostic-v08
+          if-no-files-found: error
+          path: |
+            esp32_s3_usb_audio_hid_diag/build/volvo_s3_audio_hid_diag.bin
+            esp32_s3_usb_audio_hid_diag/build/bootloader/bootloader.bin
+            esp32_s3_usb_audio_hid_diag/build/partition_table/partition-table.bin
+            esp32_s3_usb_audio_hid_diag/build/flasher_args.json
+            esp32_s3_usb_audio_hid_diag/build/flash_args
