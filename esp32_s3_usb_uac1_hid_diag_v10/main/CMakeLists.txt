@@ -2,7 +2,6 @@ idf_component_register(SRCS "main.c" INCLUDE_DIRS "." REQUIRES espressif__esp_ti
 # Both the application and TinyUSB itself MUST see identical class settings.
 set(UAC1_DIAG_DEFINITIONS
     CFG_TUD_AUDIO=1
-    CFG_TUD_HID=1
     CFG_TUD_AUDIO_ENABLE_EP_IN=1
     CFG_TUD_AUDIO_ENABLE_EP_OUT=0
     CFG_TUD_AUDIO_EP_IN_FLOW_CONTROL=0
